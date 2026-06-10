@@ -8,6 +8,11 @@ source "$SCRIPT_DIR/common.sh"
 require_camera_config
 require_var ZED_JPEG_QUALITY
 require_var ZED_DEBUG_STATS
+require_var ZED_WARMUP_FRAMES
+require_var ZED_AUTO_EXPOSURE
+require_var ZED_EXPOSURE
+require_var ZED_GAIN
+require_var ZED_LED
 
 args=(
   --port "$ZED_ZMQ_PORT" \
@@ -15,11 +20,22 @@ args=(
   --fps "$ZED_FPS" \
   --width "$ZED_WIDTH" \
   --height "$ZED_HEIGHT" \
-  --jpeg-quality "$ZED_JPEG_QUALITY"
+  --jpeg-quality "$ZED_JPEG_QUALITY" \
+  --warmup-frames "$ZED_WARMUP_FRAMES"
 )
 
 if [[ "$ZED_DEBUG_STATS" == "true" ]]; then
   args+=(--debug-stats)
+fi
+
+if [[ "$ZED_AUTO_EXPOSURE" == "true" ]]; then
+  args+=(--auto-exposure)
+else
+  args+=(--exposure "$ZED_EXPOSURE" --gain "$ZED_GAIN")
+fi
+
+if [[ "$ZED_LED" == "true" ]]; then
+  args+=(--led)
 fi
 
 if [[ -n "${ZED_SAVE_FIRST_FRAME:-}" ]]; then

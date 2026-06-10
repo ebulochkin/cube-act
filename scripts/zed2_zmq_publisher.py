@@ -65,6 +65,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--depth-mode", choices=["none", "performance", "quality"], default="none")
     parser.add_argument("--debug-stats", action="store_true", help="Log frame pixel statistics once per second.")
     parser.add_argument("--save-first-frame", help="Write the first captured RGB frame to this image path.")
+    parser.add_argument("--warmup-frames", type=int, default=60)
+    parser.add_argument("--auto-exposure", action="store_true", help="Enable ZED auto exposure/gain when supported.")
+    parser.add_argument("--exposure", type=int, default=-1, help="Manual exposure in [0, 100], or -1 to leave unchanged.")
+    parser.add_argument("--gain", type=int, default=-1, help="Manual gain in [0, 100], or -1 to leave unchanged.")
+    parser.add_argument("--led", action="store_true", help="Turn on ZED LED/status light when supported.")
     return parser.parse_args()
 
 
@@ -76,6 +81,12 @@ def main() -> None:
         raise SystemExit("--width and --height must be positive")
     if not 1 <= args.jpeg_quality <= 100:
         raise SystemExit("--jpeg-quality must be in [1, 100]")
+    if args.warmup_frames < 0:
+        raise SystemExit("--warmup-frames must be non-negative")
+    if args.exposure != -1 and not 0 <= args.exposure <= 100:
+        raise SystemExit("--exposure must be in [0, 100], or -1")
+    if args.gain != -1 and not 0 <= args.gain <= 100:
+        raise SystemExit("--gain must be in [0, 100], or -1")
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -93,6 +104,19 @@ def main() -> None:
     status = zed.open(init)
     if status != sl.ERROR_CODE.SUCCESS:
         raise SystemExit(f"Failed to open ZED 2: {status}")
+
+    if args.auto_exposure and hasattr(sl.VIDEO_SETTINGS, "AEC_AGC"):
+        zed.set_camera_settings(sl.VIDEO_SETTINGS.AEC_AGC, 1)
+        logging.info("Enabled ZED auto exposure/gain")
+    if args.exposure >= 0:
+        zed.set_camera_settings(sl.VIDEO_SETTINGS.EXPOSURE, args.exposure)
+        logging.info("Set ZED exposure to %s", args.exposure)
+    if args.gain >= 0:
+        zed.set_camera_settings(sl.VIDEO_SETTINGS.GAIN, args.gain)
+        logging.info("Set ZED gain to %s", args.gain)
+    if args.led and hasattr(sl.VIDEO_SETTINGS, "LED_STATUS"):
+        zed.set_camera_settings(sl.VIDEO_SETTINGS.LED_STATUS, 1)
+        logging.info("Enabled ZED LED/status light")
 
     runtime = sl.RuntimeParameters()
     image = sl.Mat()
@@ -124,6 +148,11 @@ def main() -> None:
     frame_count = 0
     last_stats_t = 0.0
     saved_first_frame = False
+
+    if args.warmup_frames:
+        logging.info("Warming up ZED for %s frames before publishing", args.warmup_frames)
+        for _ in range(args.warmup_frames):
+            zed.grab(runtime)
 
     try:
         while running:
