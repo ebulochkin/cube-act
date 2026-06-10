@@ -55,19 +55,34 @@ def encode_image_rgb(image: np.ndarray, quality: int) -> str:
 
 
 class ZEDCaptureThread:
-    def __init__(self, zed: sl.Camera, runtime: sl.RuntimeParameters, width: int, height: int):
+    def __init__(
+        self,
+        zed: sl.Camera,
+        runtime: sl.RuntimeParameters,
+        width: int,
+        height: int,
+        jpeg_quality: int,
+        debug_stats: bool,
+        save_first_frame: str | None,
+    ):
         self.zed = zed
         self.runtime = runtime
         self.width = width
         self.height = height
+        self.jpeg_quality = jpeg_quality
+        self.debug_stats = debug_stats
+        self.save_first_frame = save_first_frame
         self.image = sl.Mat()
         self.lock = threading.Lock()
         self.running = False
         self.thread: threading.Thread | None = None
-        self.latest_frame: np.ndarray | None = None
+        self.latest_encoded: str | None = None
         self.latest_timestamp = 0.0
         self.latest_sequence = 0
         self.failures = 0
+        self.encoded_frames = 0
+        self.last_stats_t = 0.0
+        self.saved_first_frame = False
 
     def start(self) -> None:
         self.running = True
@@ -79,10 +94,9 @@ class ZEDCaptureThread:
         if self.thread is not None:
             self.thread.join(timeout=2.0)
 
-    def get_latest(self) -> tuple[np.ndarray | None, float, int]:
+    def get_latest(self) -> tuple[str | None, float, int, int]:
         with self.lock:
-            frame = None if self.latest_frame is None else self.latest_frame.copy()
-            return frame, self.latest_timestamp, self.latest_sequence
+            return self.latest_encoded, self.latest_timestamp, self.latest_sequence, self.failures
 
     def _loop(self) -> None:
         resolution = sl.Resolution(self.width, self.height)
@@ -95,13 +109,34 @@ class ZEDCaptureThread:
 
             self.zed.retrieve_image(self.image, sl.VIEW.LEFT, sl.MEM.CPU, resolution)
             rgba = self.image.get_data()
-            rgb = cv2.cvtColor(rgba, cv2.COLOR_RGBA2RGB).copy()
+            rgb = cv2.cvtColor(rgba, cv2.COLOR_RGBA2RGB)
             now = time.time()
+            encoded = encode_image_rgb(rgb, self.jpeg_quality)
+
+            if self.debug_stats and now - self.last_stats_t >= 1.0:
+                logging.info(
+                    "ZED frame stats: shape=%s dtype=%s min=%s max=%s mean=%.2f encode_fps=%s capture_failures=%s",
+                    rgb.shape,
+                    rgb.dtype,
+                    int(rgb.min()),
+                    int(rgb.max()),
+                    float(rgb.mean()),
+                    self.encoded_frames,
+                    self.failures,
+                )
+                self.encoded_frames = 0
+                self.last_stats_t = now
+
+            if self.save_first_frame and not self.saved_first_frame:
+                cv2.imwrite(self.save_first_frame, cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+                logging.info("Saved first ZED frame to %s", self.save_first_frame)
+                self.saved_first_frame = True
 
             with self.lock:
-                self.latest_frame = rgb
+                self.latest_encoded = encoded
                 self.latest_timestamp = now
                 self.latest_sequence += 1
+                self.encoded_frames += 1
 
 
 def parse_args() -> argparse.Namespace:
@@ -220,9 +255,7 @@ def main() -> None:
     )
     frame_period_s = 1.0 / args.fps
     frame_count = 0
-    last_stats_t = 0.0
     last_report_t = time.time()
-    saved_first_frame = False
     last_published_sequence = 0
 
     if args.warmup_frames:
@@ -230,14 +263,22 @@ def main() -> None:
         for _ in range(args.warmup_frames):
             zed.grab(runtime)
 
-    capture = ZEDCaptureThread(zed, runtime, args.width, args.height)
+    capture = ZEDCaptureThread(
+        zed=zed,
+        runtime=runtime,
+        width=args.width,
+        height=args.height,
+        jpeg_quality=args.jpeg_quality,
+        debug_stats=args.debug_stats,
+        save_first_frame=args.save_first_frame,
+    )
     capture.start()
 
     try:
         while running:
             start = time.perf_counter()
-            rgb, capture_timestamp, sequence = capture.get_latest()
-            if rgb is None or sequence == last_published_sequence:
+            encoded, capture_timestamp, sequence, failures = capture.get_latest()
+            if encoded is None or sequence == last_published_sequence:
                 time.sleep(0.001)
                 continue
 
@@ -245,30 +286,20 @@ def main() -> None:
             frame_count += 1
             now = time.time()
 
-            if args.debug_stats and now - last_stats_t >= 1.0:
+            if args.debug_stats and now - last_report_t >= 1.0:
                 elapsed = max(now - last_report_t, 1e-9)
                 logging.info(
-                    "ZED frame stats: shape=%s dtype=%s min=%s max=%s mean=%.2f publish_fps=%.1f capture_failures=%s",
-                    rgb.shape,
-                    rgb.dtype,
-                    int(rgb.min()),
-                    int(rgb.max()),
-                    float(rgb.mean()),
+                    "ZED publish stats: publish_fps=%.1f last_sequence=%s capture_failures=%s",
                     frame_count / elapsed,
-                    capture.failures,
+                    sequence,
+                    failures,
                 )
                 frame_count = 0
                 last_report_t = now
-                last_stats_t = now
-
-            if args.save_first_frame and not saved_first_frame:
-                cv2.imwrite(args.save_first_frame, cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
-                logging.info("Saved first ZED frame to %s", args.save_first_frame)
-                saved_first_frame = True
 
             payload = {
                 "timestamps": {args.camera_name: capture_timestamp},
-                "images": {args.camera_name: encode_image_rgb(rgb, args.jpeg_quality)},
+                "images": {args.camera_name: encoded},
             }
             with contextlib.suppress(zmq.Again):
                 socket.send_string(json.dumps(payload), flags=zmq.NOBLOCK)
