@@ -140,12 +140,13 @@ EPISODE_TIME_S=30
 RESET_TIME_S=10
 PUSH_TO_HUB=false
 DATASET_STREAMING_ENCODING=true
+DATASET_ENCODER_QUEUE_MAXSIZE=120
 DATASET_ENCODER_THREADS=1
-DATASET_CAMERA_VCODEC=auto
+DATASET_CAMERA_VCODEC=h264
 DATASET_CAMERA_CRF=30
 ```
 
-Для RTX 4090 лучше начинать с `DATASET_CAMERA_VCODEC=auto`: LeRobot попробует выбрать hardware encoder, например `h264_nvenc`. Это разгружает CPU по сравнению с дефолтным `libsvtav1`, особенно при трех камерах.
+Для стабильной записи с тремя камерами лучше начинать с `DATASET_CAMERA_VCODEC=h264`. Дефолтный `libsvtav1` сильно грузит CPU, а `auto` может выбрать `h264_nvenc`; в некоторых версиях LeRobot/PyAV NVENC падает в encoder thread с ошибкой типа `expected str, got int`.
 
 Параметры обучения:
 
@@ -481,7 +482,8 @@ pip install /tmp/pyzed-5.3-cp312-cp312-linux_x86_64.whl
 - проверь, что `./scripts/start_zed2_overhead.sh` запущен
 - проверь `ZED_SERVER_ADDRESS`
 - проверь, что порт `ZED_ZMQ_PORT` совпадает в publisher и LeRobot config
-- если ошибка выглядит как `latest frame is too old`, снизь нагрузку: `DATASET_CAMERA_VCODEC=auto`, `DATASET_ENCODER_THREADS=1`, `ZED_JPEG_QUALITY=70`, при необходимости `CONTROL_FPS=15`
+- если ошибка выглядит как `latest frame is too old`, снизь нагрузку: `DATASET_CAMERA_VCODEC=h264`, `DATASET_ENCODER_THREADS=1`, `DATASET_ENCODER_QUEUE_MAXSIZE=120`, `ZED_JPEG_QUALITY=70`, при необходимости `CONTROL_FPS=15`
+- если encoder thread падает с `expected str, got int` после `DATASET_CAMERA_VCODEC=auto`, поставь `DATASET_CAMERA_VCODEC=h264`; это обход проблемы с `h264_nvenc`
 
 LeRobot не понимает RealSense camera type:
 

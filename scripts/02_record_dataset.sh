@@ -17,6 +17,7 @@ require_var PUSH_TO_HUB
 require_var RESUME_RECORDING
 require_var DISPLAY_DATA
 require_var DATASET_STREAMING_ENCODING
+require_var DATASET_ENCODER_QUEUE_MAXSIZE
 require_var DATASET_ENCODER_THREADS
 require_var DATASET_CAMERA_VCODEC
 require_var DATASET_CAMERA_CRF
@@ -36,6 +37,7 @@ lerobot-record \
   --dataset.episode_time_s="$EPISODE_TIME_S" \
   --dataset.reset_time_s="$RESET_TIME_S" \
   --dataset.streaming_encoding="$DATASET_STREAMING_ENCODING" \
+  --dataset.encoder_queue_maxsize="$DATASET_ENCODER_QUEUE_MAXSIZE" \
   --dataset.encoder_threads="$DATASET_ENCODER_THREADS" \
   --dataset.camera_encoder.vcodec="$DATASET_CAMERA_VCODEC" \
   --dataset.camera_encoder.crf="$DATASET_CAMERA_CRF" \
