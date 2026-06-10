@@ -106,11 +106,22 @@ class ZEDCamera(Camera):
         init.coordinate_units = sl.UNIT.METER
 
         if self.config.pre_open_sleep_s:
+            logger.info("Waiting %.1fs before opening %s", self.config.pre_open_sleep_s, self)
             time.sleep(self.config.pre_open_sleep_s)
 
         status = sl.ERROR_CODE.FAILURE
         zed: sl.Camera | None = None
         for attempt in range(1, self.config.open_retries + 1):
+            logger.info(
+                "Opening %s attempt %s/%s: resolution=%s fps=%s size=%sx%s",
+                self,
+                attempt,
+                self.config.open_retries,
+                self.config.zed_resolution,
+                self.fps,
+                self.width,
+                self.height,
+            )
             zed = sl.Camera()
             status = zed.open(init)
             if status == sl.ERROR_CODE.SUCCESS:

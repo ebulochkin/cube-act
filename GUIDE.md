@@ -497,6 +497,20 @@ wget --show-progress --timeout=30 --tries=3 \
 pip install /tmp/pyzed-5.3-cp312-cp312-linux_x86_64.whl
 ```
 
+Если ZED SDK пишет `CAMERA STREAM FAILED TO START`, сначала освободи камеру и удали lock-файлы:
+
+```bash
+./scripts/zed_recover.sh
+```
+
+Потом проверь ZED вне LeRobot:
+
+```bash
+ZED_Explorer
+```
+
+Если `ZED_Explorer` тоже не открывает stream, проблема ниже Python/LeRobot: USB, питание, занятый девайс, зависший SDK state. Обычно помогает вынуть/вставить USB ZED и снова запустить `./scripts/zed_recover.sh`.
+
 `ZMQCamera timeout` во время записи или rollout:
 
 - проверь, что `./scripts/start_zed2_overhead.sh` запущен
