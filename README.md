@@ -4,7 +4,7 @@
 
 Конфигурация сенсоров:
 
-- `overhead`: ZED 2 сверху, подключается через небольшой мост `pyzed -> ZMQCamera`
+- `overhead`: ZED 2 сверху, подключается через локальный LeRobot camera plugin `type=zed`
 - `side`: Intel RealSense D435i сбоку, через встроенную камеру LeRobot
 - `wrist`: Intel RealSense D405 на гриппере, через встроенную камеру LeRobot
 
@@ -18,7 +18,7 @@
 - `lerobot-rollout`
 - `lerobot-replay`
 
-Единственная кастомная часть: [scripts/zed2_zmq_publisher.py](scripts/zed2_zmq_publisher.py). Она нужна потому, что ZED 2 не поддерживается LeRobot как встроенный тип камеры. Скрипт читает RGB-кадр через `pyzed`, кодирует JPEG и публикует его в формате, который ожидает стандартная LeRobot `ZMQCamera`.
+Единственная кастомная часть: пакет [lerobot_camera_zed](lerobot_camera_zed). Он нужен потому, что ZED 2 не поддерживается LeRobot как встроенный тип камеры. Пакет регистрирует `CameraConfig` с `type=zed` и возвращает RGB-кадр напрямую, без ZMQ/JPEG/base64.
 
 ## Быстрый Старт
 
@@ -36,6 +36,7 @@ pip install -e ".[core_scripts,training,intelrealsense,pyzmq-dep]"
 В `cube-act`:
 
 ```bash
+pip install -e .
 cp config.env.example config.env
 $EDITOR config.env
 ```
@@ -45,12 +46,6 @@ $EDITOR config.env
 ```bash
 ./scripts/00_find_hardware.sh
 ./scripts/01_calibrate.sh
-```
-
-В отдельном терминале запустить ZED 2:
-
-```bash
-./scripts/start_zed2_overhead.sh
 ```
 
 Затем записать датасет, обучить ACT и запустить политику:

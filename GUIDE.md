@@ -49,6 +49,15 @@ cd ~/code/cube-act
 
 Поэтому важно только одно: перед запуском скриптов должно быть активировано то Python окружение, где установлен LeRobot.
 
+В `cube-act` также нужно установить локальный camera plugin для ZED:
+
+```bash
+cd ~/code/cube-act
+pip install -e .
+```
+
+После этого LeRobot будет автоматически импортировать пакет `lerobot_camera_zed` и понимать camera config `type=zed`.
+
 Дополнительно установи SDK камер:
 
 - Intel RealSense SDK и `pyrealsense2`
@@ -239,8 +248,17 @@ python scripts/zed2_zmq_publisher.py
 Если ZED 2 подключена к другой машине, поставь в `config.env` IP той машины:
 
 ```bash
+ZED_CAMERA_BACKEND=zmq
 ZED_SERVER_ADDRESS=192.168.x.x
 ```
+
+Обычный рекомендуемый режим для записи на этой машине:
+
+```bash
+ZED_CAMERA_BACKEND=native
+```
+
+В этом режиме отдельный `start_zed2_overhead.sh` не нужен: LeRobot сам откроет ZED как camera plugin.
 
 ## 7. Запись Датасета
 
@@ -259,7 +277,7 @@ ZED_SERVER_ADDRESS=192.168.x.x
 
 Скрипт вызывает `lerobot-record` с тремя камерами:
 
-- `overhead`: `type=zmq`
+- `overhead`: `type=zed`
 - `side`: `type=intelrealsense`
 - `wrist`: `type=intelrealsense`
 
@@ -268,9 +286,9 @@ ZED_SERVER_ADDRESS=192.168.x.x
 ```json
 {
   "overhead": {
-    "type": "zmq",
-    "server_address": "127.0.0.1",
-    "port": 5555,
+    "type": "zed",
+    "camera_name": "overhead",
+    "zed_resolution": "HD720",
     "camera_name": "overhead",
     "width": 640,
     "height": 480,
