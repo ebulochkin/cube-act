@@ -63,6 +63,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--height", type=int, default=720)
     parser.add_argument("--jpeg-quality", type=int, default=80)
     parser.add_argument("--depth-mode", choices=["none", "performance", "quality"], default="none")
+    parser.add_argument("--debug-stats", action="store_true", help="Log frame pixel statistics once per second.")
+    parser.add_argument("--save-first-frame", help="Write the first captured RGB frame to this image path.")
     return parser.parse_args()
 
 
@@ -119,16 +121,38 @@ def main() -> None:
         args.fps,
     )
     frame_period_s = 1.0 / args.fps
+    frame_count = 0
+    last_stats_t = 0.0
+    saved_first_frame = False
 
     try:
         while running:
             start = time.perf_counter()
             if zed.grab(runtime) == sl.ERROR_CODE.SUCCESS:
                 zed.retrieve_image(image, sl.VIEW.LEFT, sl.MEM.CPU, sl.Resolution(args.width, args.height))
-                bgra = image.get_data()
-                rgb = cv2.cvtColor(bgra, cv2.COLOR_BGRA2RGB)
+                rgba = image.get_data()
+                rgb = cv2.cvtColor(rgba, cv2.COLOR_RGBA2RGB)
+
+                frame_count += 1
+                now = time.time()
+                if args.debug_stats and now - last_stats_t >= 1.0:
+                    logging.info(
+                        "ZED frame stats: shape=%s dtype=%s min=%s max=%s mean=%.2f",
+                        rgb.shape,
+                        rgb.dtype,
+                        int(rgb.min()),
+                        int(rgb.max()),
+                        float(rgb.mean()),
+                    )
+                    last_stats_t = now
+
+                if args.save_first_frame and not saved_first_frame:
+                    cv2.imwrite(args.save_first_frame, cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+                    logging.info("Saved first ZED frame to %s", args.save_first_frame)
+                    saved_first_frame = True
+
                 payload = {
-                    "timestamps": {args.camera_name: time.time()},
+                    "timestamps": {args.camera_name: now},
                     "images": {args.camera_name: encode_image_rgb(rgb, args.jpeg_quality)},
                 }
                 with contextlib.suppress(zmq.Again):
