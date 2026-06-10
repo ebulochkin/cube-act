@@ -16,11 +16,14 @@ require_var RESET_TIME_S
 require_var PUSH_TO_HUB
 require_var RESUME_RECORDING
 require_var DISPLAY_DATA
+require_var DISPLAY_COMPRESSED_IMAGES
 require_var DATASET_STREAMING_ENCODING
 require_var DATASET_ENCODER_QUEUE_MAXSIZE
 require_var DATASET_ENCODER_THREADS
 require_var DATASET_CAMERA_VCODEC
 require_var DATASET_CAMERA_CRF
+require_var DATASET_IMAGE_WRITER_PROCESSES
+require_var DATASET_IMAGE_WRITER_THREADS_PER_CAMERA
 
 lerobot-record \
   --robot.type="$ROBOT_TYPE" \
@@ -41,6 +44,9 @@ lerobot-record \
   --dataset.encoder_threads="$DATASET_ENCODER_THREADS" \
   --dataset.camera_encoder.vcodec="$DATASET_CAMERA_VCODEC" \
   --dataset.camera_encoder.crf="$DATASET_CAMERA_CRF" \
+  --dataset.num_image_writer_processes="$DATASET_IMAGE_WRITER_PROCESSES" \
+  --dataset.num_image_writer_threads_per_camera="$DATASET_IMAGE_WRITER_THREADS_PER_CAMERA" \
   --dataset.push_to_hub="$PUSH_TO_HUB" \
   --resume="$RESUME_RECORDING" \
-  --display_data="$DISPLAY_DATA"
+  --display_data="$DISPLAY_DATA" \
+  --display_compressed_images="$DISPLAY_COMPRESSED_IMAGES"
