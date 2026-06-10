@@ -117,6 +117,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--debug-stats", action="store_true", help="Log frame pixel statistics once per second.")
     parser.add_argument("--save-first-frame", help="Write the first captured RGB frame to this image path.")
     parser.add_argument("--warmup-frames", type=int, default=60)
+    parser.add_argument("--open-retries", type=int, default=5)
+    parser.add_argument("--open-retry-sleep-s", type=float, default=2.0)
     parser.add_argument("--auto-exposure", action="store_true", help="Enable ZED auto exposure/gain when supported.")
     parser.add_argument("--exposure", type=int, default=-1, help="Manual exposure in [0, 100], or -1 to leave unchanged.")
     parser.add_argument("--gain", type=int, default=-1, help="Manual gain in [0, 100], or -1 to leave unchanged.")
@@ -134,6 +136,10 @@ def main() -> None:
         raise SystemExit("--jpeg-quality must be in [1, 100]")
     if args.warmup_frames < 0:
         raise SystemExit("--warmup-frames must be non-negative")
+    if args.open_retries < 1:
+        raise SystemExit("--open-retries must be >= 1")
+    if args.open_retry_sleep_s < 0:
+        raise SystemExit("--open-retry-sleep-s must be non-negative")
     if args.exposure != -1 and not 0 <= args.exposure <= 100:
         raise SystemExit("--exposure must be in [0, 100], or -1")
     if args.gain != -1 and not 0 <= args.gain <= 100:
@@ -152,9 +158,28 @@ def main() -> None:
     init.coordinate_units = sl.UNIT.METER
 
     zed = sl.Camera()
-    status = zed.open(init)
+    status = sl.ERROR_CODE.FAILURE
+    for attempt in range(1, args.open_retries + 1):
+        status = zed.open(init)
+        if status == sl.ERROR_CODE.SUCCESS:
+            break
+
+        logging.warning(
+            "Failed to open ZED 2 on attempt %s/%s: %s",
+            attempt,
+            args.open_retries,
+            status,
+        )
+        with contextlib.suppress(Exception):
+            zed.close()
+        if attempt < args.open_retries:
+            time.sleep(args.open_retry_sleep_s)
+
     if status != sl.ERROR_CODE.SUCCESS:
-        raise SystemExit(f"Failed to open ZED 2: {status}")
+        raise SystemExit(
+            f"Failed to open ZED 2 after {args.open_retries} attempts: {status}\n"
+            "Close ZED Explorer/other camera processes, wait a few seconds, or replug the camera."
+        )
 
     if args.auto_exposure and hasattr(sl.VIDEO_SETTINGS, "AEC_AGC"):
         zed.set_camera_settings(sl.VIDEO_SETTINGS.AEC_AGC, 1)

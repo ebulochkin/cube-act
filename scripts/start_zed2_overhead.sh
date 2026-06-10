@@ -9,6 +9,8 @@ require_camera_config
 require_var ZED_JPEG_QUALITY
 require_var ZED_DEBUG_STATS
 require_var ZED_WARMUP_FRAMES
+require_var ZED_OPEN_RETRIES
+require_var ZED_OPEN_RETRY_SLEEP_S
 require_var ZED_AUTO_EXPOSURE
 require_var ZED_EXPOSURE
 require_var ZED_GAIN
@@ -21,7 +23,9 @@ args=(
   --width "$ZED_WIDTH" \
   --height "$ZED_HEIGHT" \
   --jpeg-quality "$ZED_JPEG_QUALITY" \
-  --warmup-frames "$ZED_WARMUP_FRAMES"
+  --warmup-frames "$ZED_WARMUP_FRAMES" \
+  --open-retries "$ZED_OPEN_RETRIES" \
+  --open-retry-sleep-s "$ZED_OPEN_RETRY_SLEEP_S"
 )
 
 if [[ "$ZED_DEBUG_STATS" == "true" ]]; then
