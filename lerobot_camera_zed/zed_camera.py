@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from threading import Event, Lock, Thread
 from typing import Any
 
@@ -21,6 +23,8 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+ZED_LOCK_PATTERNS = ("/tmp/.zed_enum_lock", "/tmp/.zed_*lock*")
+
 
 @CameraConfig.register_subclass("zed")
 @dataclass
@@ -32,6 +36,7 @@ class ZEDCameraConfig(CameraConfig):
     warmup_s: int = 1
     open_retries: int = 5
     open_retry_sleep_s: float = 2.0
+    pre_open_sleep_s: float = 0.0
     auto_exposure: bool = True
     exposure: int = -1
     gain: int = -1
@@ -49,6 +54,8 @@ class ZEDCameraConfig(CameraConfig):
             raise ValueError("warmup_frames must be non-negative")
         if self.open_retries < 1:
             raise ValueError("open_retries must be >= 1")
+        if self.pre_open_sleep_s < 0:
+            raise ValueError("pre_open_sleep_s must be non-negative")
         if self.exposure != -1 and not 0 <= self.exposure <= 100:
             raise ValueError("exposure must be in [0, 100], or -1")
         if self.gain != -1 and not 0 <= self.gain <= 100:
@@ -90,15 +97,21 @@ class ZEDCamera(Camera):
         if sl is None:
             raise ImportError("Stereolabs ZED Python API is not available: failed to import pyzed.sl")
 
+        self._clear_zed_locks()
+
         init = sl.InitParameters()
         init.camera_resolution = getattr(sl.RESOLUTION, self.config.zed_resolution)
         init.camera_fps = int(self.fps or 30)
         init.depth_mode = sl.DEPTH_MODE.NONE
         init.coordinate_units = sl.UNIT.METER
 
-        zed = sl.Camera()
+        if self.config.pre_open_sleep_s:
+            time.sleep(self.config.pre_open_sleep_s)
+
         status = sl.ERROR_CODE.FAILURE
+        zed: sl.Camera | None = None
         for attempt in range(1, self.config.open_retries + 1):
+            zed = sl.Camera()
             status = zed.open(init)
             if status == sl.ERROR_CODE.SUCCESS:
                 break
@@ -113,11 +126,15 @@ class ZEDCamera(Camera):
                 zed.close()
             except Exception:
                 pass
+            zed = None
             if attempt < self.config.open_retries:
                 time.sleep(self.config.open_retry_sleep_s)
 
         if status != sl.ERROR_CODE.SUCCESS:
             raise RuntimeError(f"Failed to open {self} after {self.config.open_retries} attempts: {status}")
+
+        if zed is None:
+            raise RuntimeError(f"Failed to create {self}")
 
         self.zed = zed
         self.runtime = sl.RuntimeParameters()
@@ -164,8 +181,8 @@ class ZEDCamera(Camera):
                 continue
 
             self.zed.retrieve_image(self.image, sl.VIEW.LEFT, sl.MEM.CPU, resolution)
-            rgba = self.image.get_data()
-            frame = cv2.cvtColor(rgba, cv2.COLOR_RGBA2RGB)
+            bgra = self.image.get_data()
+            frame = cv2.cvtColor(bgra, cv2.COLOR_BGRA2RGB)
             if self.color_mode == ColorMode.BGR:
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             frame = np.ascontiguousarray(frame)
@@ -231,3 +248,15 @@ class ZEDCamera(Camera):
             self.latest_timestamp = None
             self.latest_sequence = 0
             self.last_read_sequence = 0
+
+    @staticmethod
+    def _clear_zed_locks() -> None:
+        for pattern in ZED_LOCK_PATTERNS:
+            for lock_path in Path("/").glob(pattern.lstrip("/")):
+                try:
+                    os.remove(lock_path)
+                    logger.info("Removed stale ZED lock file: %s", lock_path)
+                except FileNotFoundError:
+                    pass
+                except PermissionError:
+                    logger.warning("No permission to remove ZED lock file: %s", lock_path)

@@ -43,6 +43,7 @@ require_camera_config() {
   require_var ZED_WARMUP_FRAMES
   require_var ZED_OPEN_RETRIES
   require_var ZED_OPEN_RETRY_SLEEP_S
+  require_var ZED_PRE_OPEN_SLEEP_S
   require_var ZED_AUTO_EXPOSURE
   require_var ZED_EXPOSURE
   require_var ZED_GAIN
@@ -64,9 +65,9 @@ robot_cameras_json() {
   local overhead
 
   if [[ "$ZED_CAMERA_BACKEND" == "native" ]]; then
-    overhead=$(printf '{"type":"zed","camera_name":"%s","zed_resolution":"%s","width":%s,"height":%s,"fps":%s,"warmup_frames":%s,"open_retries":%s,"open_retry_sleep_s":%s,"auto_exposure":%s,"exposure":%s,"gain":%s,"led":%s}' \
+    overhead=$(printf '{"type":"zed","camera_name":"%s","zed_resolution":"%s","width":%s,"height":%s,"fps":%s,"warmup_frames":%s,"open_retries":%s,"open_retry_sleep_s":%s,"pre_open_sleep_s":%s,"auto_exposure":%s,"exposure":%s,"gain":%s,"led":%s}' \
       "$ZED_CAMERA_NAME" "$ZED_RESOLUTION" "$ZED_WIDTH" "$ZED_HEIGHT" "$ZED_FPS" \
-      "$ZED_WARMUP_FRAMES" "$ZED_OPEN_RETRIES" "$ZED_OPEN_RETRY_SLEEP_S" \
+      "$ZED_WARMUP_FRAMES" "$ZED_OPEN_RETRIES" "$ZED_OPEN_RETRY_SLEEP_S" "$ZED_PRE_OPEN_SLEEP_S" \
       "$ZED_AUTO_EXPOSURE" "$ZED_EXPOSURE" "$ZED_GAIN" "$ZED_LED")
   elif [[ "$ZED_CAMERA_BACKEND" == "zmq" ]]; then
     overhead=$(printf '{"type":"zmq","server_address":"%s","port":%s,"camera_name":"%s","width":%s,"height":%s,"fps":%s}' \

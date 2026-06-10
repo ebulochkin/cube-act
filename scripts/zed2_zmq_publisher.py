@@ -108,8 +108,8 @@ class ZEDCaptureThread:
                 continue
 
             self.zed.retrieve_image(self.image, sl.VIEW.LEFT, sl.MEM.CPU, resolution)
-            rgba = self.image.get_data()
-            rgb = cv2.cvtColor(rgba, cv2.COLOR_RGBA2RGB)
+            bgra = self.image.get_data()
+            rgb = cv2.cvtColor(bgra, cv2.COLOR_BGRA2RGB)
             now = time.time()
             encoded = encode_image_rgb(rgb, self.jpeg_quality)
 
