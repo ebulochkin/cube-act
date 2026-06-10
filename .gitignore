@@ -6,6 +6,7 @@ config.env
 
 # LeRobot datasets, runs, checkpoints, and logs
 outputs/
+cache/
 data/
 datasets/
 lerobot_home/

@@ -55,6 +55,8 @@ $EDITOR config.env
 ./scripts/04_rollout_policy.sh
 ```
 
+По умолчанию запись сохраняется локально в `cache/datasets/so101_cube_pick`, поэтому replay можно запускать без выгрузки на Hugging Face Hub.
+
 Полная инструкция по установке, настройке и запуску находится в [GUIDE.md](GUIDE.md).
 
 ## Ссылки

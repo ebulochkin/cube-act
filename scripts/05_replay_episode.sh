@@ -7,6 +7,7 @@ source "$SCRIPT_DIR/common.sh"
 
 require_robot_config
 require_var DATASET_REPO_ID
+require_var DATASET_ROOT
 require_var CONTROL_FPS
 
 EPISODE="${1:-0}"
@@ -16,5 +17,6 @@ lerobot-replay \
   --robot.port="$ROBOT_PORT" \
   --robot.id="$ROBOT_ID" \
   --dataset.repo_id="$DATASET_REPO_ID" \
+  --dataset.root="$DATASET_ROOT" \
   --dataset.episode="$EPISODE" \
   --dataset.fps="$CONTROL_FPS"

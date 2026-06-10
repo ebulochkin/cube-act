@@ -222,8 +222,15 @@ lerobot-calibrate --teleop.type=so101_leader ...
 ```bash
 NUM_EPISODES=2
 PUSH_TO_HUB=false
+DATASET_ROOT=cache/datasets/so101_cube_pick
 DISPLAY_DATA=false
 DATASET_STREAMING_ENCODING=false
+```
+
+Даже при `PUSH_TO_HUB=false` запись сохраняется локально в `DATASET_ROOT`. По умолчанию это папка внутри репозитория:
+
+```bash
+cache/datasets/so101_cube_pick
 ```
 
 Когда локальная запись стабильно держит FPS, можно вернуть:

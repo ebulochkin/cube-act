@@ -12,13 +12,15 @@ require_var CONTROL_FPS
 require_var ROLLOUT_DURATION_S
 require_var DISPLAY_DATA
 
+cameras="$(robot_cameras_json)"
+
 lerobot-rollout \
   --strategy.type=base \
   --policy.path="$POLICY_PATH" \
   --robot.type="$ROBOT_TYPE" \
   --robot.port="$ROBOT_PORT" \
   --robot.id="$ROBOT_ID" \
-  --robot.cameras="$(robot_cameras_json)" \
+  --robot.cameras="$cameras" \
   --task="$TASK_DESCRIPTION" \
   --fps="$CONTROL_FPS" \
   --duration="$ROLLOUT_DURATION_S" \
