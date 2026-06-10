@@ -33,24 +33,12 @@ require_teleop_config() {
 }
 
 require_camera_config() {
-  require_var ZED_SERVER_ADDRESS
-  require_var ZED_ZMQ_PORT
-  require_var ZED_CAMERA_NAME
-  require_var ZED_CAMERA_BACKEND
-  require_var ZED_WIDTH
-  require_var ZED_HEIGHT
-  require_var ZED_FPS
-  require_var ZED_WARMUP_FRAMES
-  require_var ZED_OPEN_RETRIES
-  require_var ZED_OPEN_RETRY_SLEEP_S
-  require_var ZED_PRE_OPEN_SLEEP_S
-  require_var ZED_AUTO_EXPOSURE
-  require_var ZED_EXPOSURE
-  require_var ZED_GAIN
-  require_var ZED_LED
-  require_var ZED_RESOLUTION
+  require_var D455_SERIAL_OR_NAME
   require_var D435I_SERIAL_OR_NAME
   require_var D405_SERIAL_OR_NAME
+  require_var OVERHEAD_REALSENSE_WIDTH
+  require_var OVERHEAD_REALSENSE_HEIGHT
+  require_var OVERHEAD_REALSENSE_FPS
   require_var SIDE_REALSENSE_WIDTH
   require_var SIDE_REALSENSE_HEIGHT
   require_var SIDE_REALSENSE_FPS
@@ -62,23 +50,9 @@ require_camera_config() {
 
 robot_cameras_json() {
   require_camera_config
-  local overhead
 
-  if [[ "$ZED_CAMERA_BACKEND" == "native" ]]; then
-    overhead=$(printf '{"type":"zed","camera_name":"%s","zed_resolution":"%s","width":%s,"height":%s,"fps":%s,"warmup_frames":%s,"open_retries":%s,"open_retry_sleep_s":%s,"pre_open_sleep_s":%s,"auto_exposure":%s,"exposure":%s,"gain":%s,"led":%s}' \
-      "$ZED_CAMERA_NAME" "$ZED_RESOLUTION" "$ZED_WIDTH" "$ZED_HEIGHT" "$ZED_FPS" \
-      "$ZED_WARMUP_FRAMES" "$ZED_OPEN_RETRIES" "$ZED_OPEN_RETRY_SLEEP_S" "$ZED_PRE_OPEN_SLEEP_S" \
-      "$ZED_AUTO_EXPOSURE" "$ZED_EXPOSURE" "$ZED_GAIN" "$ZED_LED")
-  elif [[ "$ZED_CAMERA_BACKEND" == "zmq" ]]; then
-    overhead=$(printf '{"type":"zmq","server_address":"%s","port":%s,"camera_name":"%s","width":%s,"height":%s,"fps":%s}' \
-      "$ZED_SERVER_ADDRESS" "$ZED_ZMQ_PORT" "$ZED_CAMERA_NAME" "$ZED_WIDTH" "$ZED_HEIGHT" "$ZED_FPS")
-  else
-    echo "ZED_CAMERA_BACKEND must be either 'native' or 'zmq', got '$ZED_CAMERA_BACKEND'" >&2
-    exit 1
-  fi
-
-  printf '{"overhead":%s,"side":{"type":"intelrealsense","serial_number_or_name":"%s","width":%s,"height":%s,"fps":%s,"warmup_s":%s},"wrist":{"type":"intelrealsense","serial_number_or_name":"%s","width":%s,"height":%s,"fps":%s,"warmup_s":%s}}' \
-    "$overhead" \
+  printf '{"overhead":{"type":"intelrealsense","serial_number_or_name":"%s","width":%s,"height":%s,"fps":%s,"warmup_s":%s},"side":{"type":"intelrealsense","serial_number_or_name":"%s","width":%s,"height":%s,"fps":%s,"warmup_s":%s},"wrist":{"type":"intelrealsense","serial_number_or_name":"%s","width":%s,"height":%s,"fps":%s,"warmup_s":%s}}' \
+    "$D455_SERIAL_OR_NAME" "$OVERHEAD_REALSENSE_WIDTH" "$OVERHEAD_REALSENSE_HEIGHT" "$OVERHEAD_REALSENSE_FPS" "$REALSENSE_WARMUP_S" \
     "$D435I_SERIAL_OR_NAME" "$SIDE_REALSENSE_WIDTH" "$SIDE_REALSENSE_HEIGHT" "$SIDE_REALSENSE_FPS" "$REALSENSE_WARMUP_S" \
     "$D405_SERIAL_OR_NAME" "$WRIST_REALSENSE_WIDTH" "$WRIST_REALSENSE_HEIGHT" "$WRIST_REALSENSE_FPS" "$REALSENSE_WARMUP_S"
 }
