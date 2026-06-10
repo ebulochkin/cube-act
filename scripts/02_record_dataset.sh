@@ -16,6 +16,10 @@ require_var RESET_TIME_S
 require_var PUSH_TO_HUB
 require_var RESUME_RECORDING
 require_var DISPLAY_DATA
+require_var DATASET_STREAMING_ENCODING
+require_var DATASET_ENCODER_THREADS
+require_var DATASET_CAMERA_VCODEC
+require_var DATASET_CAMERA_CRF
 
 lerobot-record \
   --robot.type="$ROBOT_TYPE" \
@@ -31,8 +35,10 @@ lerobot-record \
   --dataset.single_task="$TASK_DESCRIPTION" \
   --dataset.episode_time_s="$EPISODE_TIME_S" \
   --dataset.reset_time_s="$RESET_TIME_S" \
-  --dataset.streaming_encoding=true \
-  --dataset.encoder_threads=2 \
+  --dataset.streaming_encoding="$DATASET_STREAMING_ENCODING" \
+  --dataset.encoder_threads="$DATASET_ENCODER_THREADS" \
+  --dataset.camera_encoder.vcodec="$DATASET_CAMERA_VCODEC" \
+  --dataset.camera_encoder.crf="$DATASET_CAMERA_CRF" \
   --dataset.push_to_hub="$PUSH_TO_HUB" \
   --resume="$RESUME_RECORDING" \
   --display_data="$DISPLAY_DATA"

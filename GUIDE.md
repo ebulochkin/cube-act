@@ -139,7 +139,13 @@ NUM_EPISODES=50
 EPISODE_TIME_S=30
 RESET_TIME_S=10
 PUSH_TO_HUB=false
+DATASET_STREAMING_ENCODING=true
+DATASET_ENCODER_THREADS=1
+DATASET_CAMERA_VCODEC=auto
+DATASET_CAMERA_CRF=30
 ```
+
+Для RTX 4090 лучше начинать с `DATASET_CAMERA_VCODEC=auto`: LeRobot попробует выбрать hardware encoder, например `h264_nvenc`. Это разгружает CPU по сравнению с дефолтным `libsvtav1`, особенно при трех камерах.
 
 Параметры обучения:
 
@@ -475,6 +481,7 @@ pip install /tmp/pyzed-5.3-cp312-cp312-linux_x86_64.whl
 - проверь, что `./scripts/start_zed2_overhead.sh` запущен
 - проверь `ZED_SERVER_ADDRESS`
 - проверь, что порт `ZED_ZMQ_PORT` совпадает в publisher и LeRobot config
+- если ошибка выглядит как `latest frame is too old`, снизь нагрузку: `DATASET_CAMERA_VCODEC=auto`, `DATASET_ENCODER_THREADS=1`, `ZED_JPEG_QUALITY=70`, при необходимости `CONTROL_FPS=15`
 
 LeRobot не понимает RealSense camera type:
 
