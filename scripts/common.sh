@@ -39,20 +39,22 @@ require_camera_config() {
   require_var OVERHEAD_REALSENSE_WIDTH
   require_var OVERHEAD_REALSENSE_HEIGHT
   require_var OVERHEAD_REALSENSE_FPS
+  require_var OVERHEAD_REALSENSE_WARMUP_S
   require_var SIDE_REALSENSE_WIDTH
   require_var SIDE_REALSENSE_HEIGHT
   require_var SIDE_REALSENSE_FPS
+  require_var SIDE_REALSENSE_WARMUP_S
   require_var WRIST_REALSENSE_WIDTH
   require_var WRIST_REALSENSE_HEIGHT
   require_var WRIST_REALSENSE_FPS
-  require_var REALSENSE_WARMUP_S
+  require_var WRIST_REALSENSE_WARMUP_S
 }
 
 robot_cameras_json() {
   require_camera_config
 
   printf '{"overhead":{"type":"intelrealsense","serial_number_or_name":"%s","width":%s,"height":%s,"fps":%s,"warmup_s":%s},"side":{"type":"intelrealsense","serial_number_or_name":"%s","width":%s,"height":%s,"fps":%s,"warmup_s":%s},"wrist":{"type":"intelrealsense","serial_number_or_name":"%s","width":%s,"height":%s,"fps":%s,"warmup_s":%s}}' \
-    "$D455_SERIAL_OR_NAME" "$OVERHEAD_REALSENSE_WIDTH" "$OVERHEAD_REALSENSE_HEIGHT" "$OVERHEAD_REALSENSE_FPS" "$REALSENSE_WARMUP_S" \
-    "$D435I_SERIAL_OR_NAME" "$SIDE_REALSENSE_WIDTH" "$SIDE_REALSENSE_HEIGHT" "$SIDE_REALSENSE_FPS" "$REALSENSE_WARMUP_S" \
-    "$D405_SERIAL_OR_NAME" "$WRIST_REALSENSE_WIDTH" "$WRIST_REALSENSE_HEIGHT" "$WRIST_REALSENSE_FPS" "$REALSENSE_WARMUP_S"
+    "$D455_SERIAL_OR_NAME" "$OVERHEAD_REALSENSE_WIDTH" "$OVERHEAD_REALSENSE_HEIGHT" "$OVERHEAD_REALSENSE_FPS" "$OVERHEAD_REALSENSE_WARMUP_S" \
+    "$D435I_SERIAL_OR_NAME" "$SIDE_REALSENSE_WIDTH" "$SIDE_REALSENSE_HEIGHT" "$SIDE_REALSENSE_FPS" "$SIDE_REALSENSE_WARMUP_S" \
+    "$D405_SERIAL_OR_NAME" "$WRIST_REALSENSE_WIDTH" "$WRIST_REALSENSE_HEIGHT" "$WRIST_REALSENSE_FPS" "$WRIST_REALSENSE_WARMUP_S"
 }

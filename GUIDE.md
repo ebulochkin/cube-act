@@ -285,10 +285,13 @@ outputs/train/so101_cube_act/checkpoints/last/pretrained_model
 ```bash
 OVERHEAD_REALSENSE_WIDTH=640
 OVERHEAD_REALSENSE_HEIGHT=480
+OVERHEAD_REALSENSE_WARMUP_S=15
 SIDE_REALSENSE_WIDTH=640
 SIDE_REALSENSE_HEIGHT=480
+SIDE_REALSENSE_WARMUP_S=15
 WRIST_REALSENSE_WIDTH=640
 WRIST_REALSENSE_HEIGHT=480
+WRIST_REALSENSE_WARMUP_S=15
 ```
 
 ## 9. Инференс На Роботе
@@ -332,10 +335,11 @@ RealSense камера не находится:
 - обнови `D455_SERIAL_OR_NAME`, `D435I_SERIAL_OR_NAME`, `D405_SERIAL_OR_NAME`
 - убедись, что установлен `pyrealsense2`
 - закрой RealSense Viewer, если он открыт
+- если раньше ставился локальный ZED plugin, удали его из окружения: `pip uninstall -y lerobot_camera_zed`
 
 Одна из камер не отдает кадры:
 
-- увеличь `REALSENSE_WARMUP_S=15`
+- увеличь warmup проблемной камеры, например `OVERHEAD_REALSENSE_WARMUP_S=30`
 - попробуй снизить FPS на проблемной камере до `15`
 - проверь USB3 порт и кабель
 - не подключай все камеры через слабый USB-хаб
