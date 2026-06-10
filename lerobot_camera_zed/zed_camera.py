@@ -202,7 +202,7 @@ class ZEDCamera(Camera):
                 frame = self.latest_frame
                 sequence = self.latest_sequence
 
-            if frame is not None and sequence != self.last_read_sequence:
+            if frame is not None:
                 self.last_read_sequence = sequence
                 return frame
             time.sleep(0.001)
