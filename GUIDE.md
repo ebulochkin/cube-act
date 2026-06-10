@@ -22,13 +22,32 @@
 
 ## 2. Установка LeRobot
 
-На рабочем компьютере:
+LeRobot лучше держать отдельным репозиторием, а не клонировать внутрь `cube-act`. Например:
 
 ```bash
-git clone https://github.com/huggingface/lerobot.git
-cd lerobot
+mkdir -p ~/code
+git clone https://github.com/huggingface/lerobot.git ~/code/lerobot
+cd ~/code/lerobot
 pip install -e ".[core_scripts,training,intelrealsense,pyzmq-dep]"
 ```
+
+`cube-act` при этом остается отдельной папкой, например:
+
+```bash
+git clone <your_cube_act_repo_url> ~/code/cube-act
+cd ~/code/cube-act
+```
+
+Наши скрипты не импортируют LeRobot по относительному пути и не ожидают папку `lerobot` внутри проекта. Они вызывают установленные CLI-команды:
+
+- `lerobot-record`
+- `lerobot-train`
+- `lerobot-rollout`
+- `lerobot-calibrate`
+- `lerobot-find-port`
+- `lerobot-find-cameras`
+
+Поэтому важно только одно: перед запуском скриптов должно быть активировано то Python окружение, где установлен LeRobot.
 
 Дополнительно установи SDK камер:
 
@@ -36,9 +55,45 @@ pip install -e ".[core_scripts,training,intelrealsense,pyzmq-dep]"
 - ZED SDK и Python API `pyzed`
 - `opencv-python`, если его нет в окружении
 
+Для ZED SDK важно: Python API нужно поставить именно в активное окружение LeRobot. Если окружение называется `lerobot_pure`, сначала активируй его, потом установи `pyzed`:
+
+```bash
+conda activate lerobot_pure
+pip uninstall -y pyzed
+cd /usr/local/zed
+python get_python_api.py
+```
+
+Проверка:
+
+```bash
+python -c "import pyzed.sl as sl; print('pyzed.sl ok')"
+```
+
+Не ставь ZED Python API командой `pip install pyzed`: это другой PyPI-пакет. Если `python -c "import pyzed; print(pyzed.__file__)"` показывает файл вроде `site-packages/pyzed.py`, значит установлен неправильный пакет, его нужно удалить через `pip uninstall -y pyzed`.
+
+Если `/usr/local/zed/get_python_api.py` отсутствует, значит ZED SDK не установлен или установлен в другое место. Сначала поставь ZED SDK с сайта Stereolabs, затем повтори команды выше.
+
+Если `python get_python_api.py` долго висит на проверке URL или скачивании, можно поставить wheel вручную. Для ZED SDK 5.3 и Python 3.12:
+
+```bash
+conda activate lerobot_pure
+pip uninstall -y pyzed
+
+cd /tmp
+wget --show-progress --timeout=30 --tries=3 \
+  https://download.stereolabs.com/zedsdk/5.3/whl/linux_x86_64/pyzed-5.3-cp312-cp312-linux_x86_64.whl
+
+pip install /tmp/pyzed-5.3-cp312-cp312-linux_x86_64.whl
+python -c "import pyzed.sl as sl; print('pyzed.sl ok')"
+```
+
+Если `wget` тоже не скачивает, скачай этот `.whl` на другой машине и перенеси на workstation через `scp`, затем выполни `pip install /path/to/pyzed-5.3-cp312-cp312-linux_x86_64.whl`.
+
 Проверка, что CLI LeRobot доступны:
 
 ```bash
+which lerobot-record
 lerobot-find-port --help
 lerobot-record --help
 lerobot-train --help
@@ -91,9 +146,11 @@ PUSH_TO_HUB=false
 ```bash
 TRAIN_OUTPUT_DIR=outputs/train/so101_cube_act
 TRAIN_STEPS=100000
-TRAIN_BATCH_SIZE=8
-TRAIN_NUM_WORKERS=4
+TRAIN_BATCH_SIZE=32
+TRAIN_NUM_WORKERS=8
 ```
+
+Для RTX 4090 это нормальный стартовый конфиг. Если память GPU забивается, уменьши `TRAIN_BATCH_SIZE` до `16`. Если память остается свободной и dataloader успевает, можно попробовать `48` или `64`.
 
 Путь к политике для инференса:
 
@@ -206,8 +263,8 @@ ZED_SERVER_ADDRESS=192.168.x.x
     "server_address": "127.0.0.1",
     "port": 5555,
     "camera_name": "overhead",
-    "width": 1280,
-    "height": 720,
+    "width": 640,
+    "height": 480,
     "fps": 30
   },
   "side": {
@@ -271,6 +328,19 @@ lerobot-train \
 ```
 
 Важно: если `TRAIN_OUTPUT_DIR` уже существует, LeRobot остановится, чтобы не перезаписать прошлый запуск. В таком случае выбери новый путь или вручную настрой resume.
+
+Для ACT лучше держать одинаковое разрешение всех image inputs. Поэтому в `config.env.example` стоит:
+
+```bash
+ZED_WIDTH=640
+ZED_HEIGHT=480
+SIDE_REALSENSE_WIDTH=640
+SIDE_REALSENSE_HEIGHT=480
+WRIST_REALSENSE_WIDTH=640
+WRIST_REALSENSE_HEIGHT=480
+```
+
+Это особенно важно для трех камер: overhead, side и wrist.
 
 После обучения ожидаемый путь к модели:
 
@@ -356,6 +426,49 @@ ZED publisher не стартует:
 - проверь, что установлен ZED SDK
 - проверь, что Python видит `pyzed`
 - проверь, что ZED 2 доступна не из другого процесса
+
+Проверка `pyzed`:
+
+```bash
+python -c "import pyzed.sl as sl; print('pyzed.sl ok')"
+```
+
+Если видишь ошибку `pyzed is not installed`, установи Python API ZED SDK в активное окружение:
+
+```bash
+conda activate lerobot_pure
+pip uninstall -y pyzed
+cd /usr/local/zed
+python get_python_api.py
+```
+
+Если ошибка выглядит так: `'pyzed' is not a package`, проверь путь:
+
+```bash
+python -c "import pyzed; print(pyzed.__file__)"
+```
+
+Если вывод похож на `.../site-packages/pyzed.py`, это неправильный PyPI-пакет. Удали его:
+
+```bash
+pip uninstall -y pyzed
+```
+
+Потом снова поставь API из ZED SDK:
+
+```bash
+cd /usr/local/zed
+python get_python_api.py
+```
+
+Если `get_python_api.py` зависает на скачивании, ставь wheel напрямую:
+
+```bash
+cd /tmp
+wget --show-progress --timeout=30 --tries=3 \
+  https://download.stereolabs.com/zedsdk/5.3/whl/linux_x86_64/pyzed-5.3-cp312-cp312-linux_x86_64.whl
+pip install /tmp/pyzed-5.3-cp312-cp312-linux_x86_64.whl
+```
 
 `ZMQCamera timeout` во время записи или rollout:
 

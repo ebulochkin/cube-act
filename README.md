@@ -22,7 +22,18 @@
 
 ## Быстрый Старт
 
-На рабочем компьютере:
+LeRobot не нужно клонировать внутрь этого репозитория. Держи его отдельно, например:
+
+```bash
+mkdir -p ~/code
+git clone https://github.com/huggingface/lerobot.git ~/code/lerobot
+cd ~/code/lerobot
+pip install -e ".[core_scripts,training,intelrealsense,pyzmq-dep]"
+```
+
+После этого команды `lerobot-record`, `lerobot-train`, `lerobot-rollout` должны быть доступны в текущем Python окружении.
+
+В `cube-act`:
 
 ```bash
 cp config.env.example config.env

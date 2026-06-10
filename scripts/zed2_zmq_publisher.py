@@ -18,8 +18,23 @@ import zmq
 try:
     import pyzed.sl as sl
 except ImportError as exc:
+    try:
+        import pyzed
+
+        pyzed_location = getattr(pyzed, "__file__", "unknown location")
+    except ImportError:
+        pyzed_location = "not importable at all"
+
     raise SystemExit(
-        "pyzed is not installed. Install the ZED SDK, then install its Python API on the robot workstation."
+        "Stereolabs ZED Python API is not available: failed to import `pyzed.sl`.\n"
+        f"Current `pyzed` resolves to: {pyzed_location}\n"
+        "The PyPI package named `pyzed` is not enough for ZED cameras.\n"
+        "If `pyzed` resolves to a single `pyzed.py` file, remove it with:\n"
+        "  pip uninstall -y pyzed\n"
+        "Install the ZED SDK, then run its Python installer in this environment, usually:\n"
+        "  cd /usr/local/zed && python get_python_api.py\n"
+        "Check with:\n"
+        "  python -c \"import pyzed.sl as sl; print('pyzed.sl ok')\""
     ) from exc
 
 
