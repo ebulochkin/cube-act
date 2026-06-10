@@ -1,0 +1,41 @@
+# Local configuration and secrets
+config.env
+.env
+.env.*
+!.env.example
+
+# LeRobot datasets, runs, checkpoints, and logs
+outputs/
+data/
+datasets/
+lerobot_home/
+wandb/
+runs/
+*.ckpt
+*.pth
+*.pt
+*.safetensors
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# macOS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Temporary files
+tmp/
+*.log
