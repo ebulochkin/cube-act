@@ -68,6 +68,15 @@ POLICY_PATH=remote_checkpoints/so101_cube_act_009250/pretrained_model
 
 Полная инструкция по установке, настройке и запуску находится в [GUIDE.md](GUIDE.md).
 
+Для обучения на Vast после clone репозитория можно сразу создать локальное training-окружение:
+
+```bash
+./scripts/setup_vast_venv.sh
+source .venv/bin/activate
+```
+
+Подробный Vast workflow описан в [VAST_TRAINING_MANUAL.md](VAST_TRAINING_MANUAL.md).
+
 ## Ссылки
 
 - https://huggingface.co/docs/lerobot/en/il_robots

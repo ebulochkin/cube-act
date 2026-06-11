@@ -37,21 +37,32 @@ git clone https://github.com/ebulochkin/cube-act.git cube-act
 cd /root/cube-act
 ```
 
-Создать venv на Python 3.12:
+Создать `.venv`, скачать отдельный LeRobot checkout и поставить все зависимости для обучения:
 
 ```bash
-uv venv .venv --python /usr/bin/python3
+./scripts/setup_vast_venv.sh
 source .venv/bin/activate
 ```
 
-Поставить LeRobot:
+По умолчанию скрипт:
+
+- создает окружение в `/root/cube-act/.venv`
+- клонирует LeRobot в `/root/code/lerobot`
+- ставит `lerobot` с extras `core_scripts,training`
+- ставит `huggingface_hub` и `hf_transfer`
+- проверяет, видит ли PyTorch CUDA
+
+Можно переопределить пути:
 
 ```bash
-mkdir -p /root/code
-git clone https://github.com/huggingface/lerobot.git /root/code/lerobot
-cd /root/code/lerobot
-uv pip install -e ".[core_scripts,training]"
-uv pip install huggingface_hub hf_transfer
+LEROBOT_DIR=/root/code/lerobot PYTHON_BIN=/usr/bin/python3 ./scripts/setup_vast_venv.sh
+```
+
+Если на чистом образе нет `git` или `tmux`:
+
+```bash
+apt-get update
+apt-get install -y git tmux rsync
 ```
 
 ## 3. Скачать dataset
@@ -260,4 +271,3 @@ final loss around 0.106
 006000 - середина
 009250 - финальный
 ```
-
