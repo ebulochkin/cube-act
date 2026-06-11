@@ -5,9 +5,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 VENV_DIR="${VENV_DIR:-$REPO_ROOT/.venv}"
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+PYTHON_BIN="${PYTHON_BIN:-3.12}"
+UV_BOOTSTRAP_PYTHON="${UV_BOOTSTRAP_PYTHON:-python3}"
 LEROBOT_DIR="${LEROBOT_DIR:-$HOME/code/lerobot}"
 LEROBOT_REF="${LEROBOT_REF:-main}"
+REQUIRED_PYTHON_PREFIX="${REQUIRED_PYTHON_PREFIX:-3.12}"
 
 ensure_uv() {
   if command -v uv >/dev/null 2>&1; then
@@ -15,7 +17,7 @@ ensure_uv() {
   fi
 
   echo "uv is not installed; installing it with pip..."
-  "$PYTHON_BIN" -m pip install --user --upgrade uv
+  "$UV_BOOTSTRAP_PYTHON" -m pip install --user --upgrade uv
   export PATH="$HOME/.local/bin:$PATH"
 
   if ! command -v uv >/dev/null 2>&1; then
@@ -38,10 +40,36 @@ clone_or_update_lerobot() {
   git -C "$LEROBOT_DIR" checkout "$LEROBOT_REF"
 }
 
+ensure_venv_python_version() {
+  if [[ ! -x "$VENV_DIR/bin/python" ]]; then
+    return
+  fi
+
+  local version
+  version="$("$VENV_DIR/bin/python" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+
+  if [[ "$version" == "$REQUIRED_PYTHON_PREFIX" ]]; then
+    return
+  fi
+
+  cat >&2 <<EOF
+Existing virtual environment uses Python $version, but LeRobot requires Python $REQUIRED_PYTHON_PREFIX.
+
+Remove it and rerun:
+  rm -rf "$VENV_DIR"
+  ./scripts/setup_vast_venv.sh
+
+Or create another env:
+  VENV_DIR="$REPO_ROOT/.venv312" ./scripts/setup_vast_venv.sh
+EOF
+  exit 1
+}
+
 main() {
   cd "$REPO_ROOT"
 
   ensure_uv
+  ensure_venv_python_version
 
   echo "Creating virtual environment: $VENV_DIR"
   uv venv "$VENV_DIR" --python "$PYTHON_BIN"

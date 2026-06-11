@@ -47,6 +47,7 @@ source .venv/bin/activate
 По умолчанию скрипт:
 
 - создает окружение в `/root/cube-act/.venv`
+- использует Python `3.12`, потому что LeRobot `0.5.x` требует `Python>=3.12`
 - клонирует LeRobot в `/root/code/lerobot`
 - ставит `lerobot` с extras `core_scripts,training`
 - ставит `huggingface_hub` и `hf_transfer`
@@ -55,7 +56,15 @@ source .venv/bin/activate
 Можно переопределить пути:
 
 ```bash
-LEROBOT_DIR=/root/code/lerobot PYTHON_BIN=/usr/bin/python3 ./scripts/setup_vast_venv.sh
+LEROBOT_DIR=/root/code/lerobot VENV_DIR=/root/cube-act/.venv ./scripts/setup_vast_venv.sh
+```
+
+Если `.venv` уже случайно создан на Python `3.11`, удали его и создай заново:
+
+```bash
+rm -rf .venv
+./scripts/setup_vast_venv.sh
+source .venv/bin/activate
 ```
 
 Если на чистом образе нет `git` или `tmux`:
