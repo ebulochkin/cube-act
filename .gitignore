@@ -10,12 +10,21 @@ cache/
 data/
 datasets/
 lerobot_home/
+remote_checkpoints/
+remote_logs/
 wandb/
 runs/
+checkpoints/
+logs/
 *.ckpt
 *.pth
 *.pt
 *.safetensors
+*.rrd
+*.mp4
+*.parquet
+*.arrow
+*.jsonl
 
 # Python
 __pycache__/

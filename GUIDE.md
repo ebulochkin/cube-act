@@ -273,7 +273,11 @@ RESUME_RECORDING=true
 ```bash
 lerobot-train \
   --dataset.repo_id="$DATASET_REPO_ID" \
+  --dataset.root="$DATASET_ROOT" \
+  --dataset.return_uint8="$TRAIN_DATASET_RETURN_UINT8" \
   --policy.type=act \
+  --policy.push_to_hub=false \
+  --policy.use_amp="$TRAIN_POLICY_USE_AMP" \
   --output_dir="$TRAIN_OUTPUT_DIR"
 ```
 
@@ -292,13 +296,13 @@ outputs/train/so101_cube_act/checkpoints/last/pretrained_model
 ```bash
 OVERHEAD_REALSENSE_WIDTH=640
 OVERHEAD_REALSENSE_HEIGHT=480
-OVERHEAD_REALSENSE_WARMUP_S=15
+OVERHEAD_REALSENSE_WARMUP_S=10
 SIDE_REALSENSE_WIDTH=640
 SIDE_REALSENSE_HEIGHT=480
-SIDE_REALSENSE_WARMUP_S=15
+SIDE_REALSENSE_WARMUP_S=10
 WRIST_REALSENSE_WIDTH=640
 WRIST_REALSENSE_HEIGHT=480
-WRIST_REALSENSE_WARMUP_S=15
+WRIST_REALSENSE_WARMUP_S=10
 ```
 
 ## 9. Инференс На Роботе
@@ -315,17 +319,206 @@ WRIST_REALSENSE_WARMUP_S=15
 lerobot-rollout \
   --strategy.type=base \
   --policy.path="$POLICY_PATH" \
+  --policy.n_action_steps="$POLICY_N_ACTION_STEPS" \
   --robot.type=so101_follower \
   --robot.cameras="..."
 ```
 
-Длительность rollout задается:
+### Выбор Checkpoint
+
+`POLICY_PATH` должен указывать на папку `pretrained_model`, а не на весь checkpoint целиком:
+
+```bash
+POLICY_PATH=remote_checkpoints/so101_cube_act_009250/pretrained_model
+```
+
+Правильная структура:
+
+```text
+remote_checkpoints/so101_cube_act_009250/
+  pretrained_model/
+    config.json
+    model.safetensors
+    policy_preprocessor.json
+    policy_postprocessor.json
+    ...
+  training_state/
+    optimizer_state.safetensors
+    training_step.json
+    ...
+```
+
+Для rollout нужен только `pretrained_model`. Папка `training_state` нужна, если потом хочется продолжать обучение с этого checkpoint.
+
+Чтобы переключить модель:
+
+```bash
+POLICY_PATH=remote_checkpoints/so101_cube_act_009250/pretrained_model
+```
+
+Проверить шаг checkpoint:
+
+```bash
+cat remote_checkpoints/so101_cube_act_009250/training_state/training_step.json
+```
+
+### Основные Параметры Rollout
+
+Часто используемый текущий блок:
+
+```bash
+POLICY_PATH=remote_checkpoints/so101_cube_act_009250/pretrained_model
+CONTROL_FPS=30
+ROLLOUT_DURATION_S=7
+ROLLOUT_LOOP=true
+ROLLOUT_RETURN_ON_RESET=true
+POLICY_TEMPORAL_ENSEMBLE_COEFF=0.03
+POLICY_N_ACTION_STEPS=1
+DISPLAY_DATA=true
+```
+
+Что делает каждый параметр:
+
+- `POLICY_PATH`: какую обученную модель запускать.
+- `CONTROL_FPS`: частота control loop. `30` дает более плавное управление, `15` легче для policy inference и камер.
+- `ROLLOUT_DURATION_S`: длина одной попытки в секундах. В loop-режиме это интервал между reset-ами.
+- `ROLLOUT_LOOP`: если `true`, `lerobot-rollout` запускается один раз и работает бесконечно, пока не нажать `Ctrl+C`.
+- `ROLLOUT_RETURN_ON_RESET`: если `true`, рука возвращается в initial position на каждом soft reset.
+- `POLICY_TEMPORAL_ENSEMBLE_COEFF`: включает temporal ensembling для ACT. Значение `none` выключает его.
+- `POLICY_N_ACTION_STEPS`: сколько action-шагов использовать из одного предсказанного ACT chunk.
+- `DISPLAY_DATA`: включает Rerun/визуализацию. Полезно для отладки, но может снижать FPS.
+
+### Temporal Ensembling
+
+ACT умеет temporal ensembling: policy вызывается на каждом шаге, а действия сглаживаются по нескольким предсказанным chunk-ам.
+
+Включить:
+
+```bash
+POLICY_TEMPORAL_ENSEMBLE_COEFF=0.03
+POLICY_N_ACTION_STEPS=1
+```
+
+Важно: при включенном temporal ensembling `POLICY_N_ACTION_STEPS` обязан быть `1`. Иначе LeRobot упадет с ошибкой:
+
+```text
+`n_action_steps` must be 1 when using temporal ensembling
+```
+
+Как выбирать coefficient:
+
+- `0.01`: классическое ACT-значение, сильнее усредняет старые предсказания.
+- `0.03`: хороший практический старт для более отзывчивого движения.
+- `0.05`: еще более резкое/отзывчивое поведение.
+- `0.5`: очень быстро забывает старые действия, сглаживание становится слабее.
+- `none`: выключает temporal ensembling.
+
+Если с temporal ensembling появляются warnings вида `Record loop is running slower`, policy inference не успевает на заданном FPS. Тогда:
+
+```bash
+CONTROL_FPS=15
+```
+
+или выключи ensembling:
+
+```bash
+POLICY_TEMPORAL_ENSEMBLE_COEFF=none
+POLICY_N_ACTION_STEPS=100
+```
+
+### Chunked ACT Без Ensembling
+
+Быстрый режим:
+
+```bash
+POLICY_TEMPORAL_ENSEMBLE_COEFF=none
+POLICY_N_ACTION_STEPS=100
+CONTROL_FPS=30
+```
+
+В этом режиме ACT предсказывает chunk действий и не обязан вызывать нейросеть каждый control tick. Обычно это быстрее и реже роняет FPS, но движение может быть менее адаптивным.
+
+### Loop Режим Без Долгого Рестарта
+
+Если сделать loop на уровне bash, каждый rollout будет заново:
+
+- грузить policy
+- подключать камеры
+- подключать robot
+- ждать warmup
+
+Поэтому текущий `04_rollout_policy.sh` использует другой режим:
+
+```bash
+ROLLOUT_LOOP=true
+ROLLOUT_DURATION_S=7
+ROLLOUT_RETURN_ON_RESET=true
+```
+
+Скрипт запускает один бесконечный `lerobot-rollout`, а внутри процесса каждые `ROLLOUT_DURATION_S` секунд делает soft reset policy/interpolator. На `lab01` дополнительно пропатчен LeRobot `BaseStrategy`, чтобы при soft reset рука возвращалась в initial position без disconnect/reconnect.
+
+Остановка:
+
+```text
+Ctrl+C
+```
+
+### Типовые Preset-ы
+
+Плавный, но более тяжелый:
+
+```bash
+CONTROL_FPS=30
+POLICY_TEMPORAL_ENSEMBLE_COEFF=0.03
+POLICY_N_ACTION_STEPS=1
+ROLLOUT_DURATION_S=7
+ROLLOUT_LOOP=true
+ROLLOUT_RETURN_ON_RESET=true
+```
+
+Стабильный, если inference не успевает:
+
+```bash
+CONTROL_FPS=15
+POLICY_TEMPORAL_ENSEMBLE_COEFF=0.03
+POLICY_N_ACTION_STEPS=1
+ROLLOUT_DURATION_S=7
+ROLLOUT_LOOP=true
+ROLLOUT_RETURN_ON_RESET=true
+```
+
+Самый быстрый:
+
+```bash
+CONTROL_FPS=30
+POLICY_TEMPORAL_ENSEMBLE_COEFF=none
+POLICY_N_ACTION_STEPS=100
+ROLLOUT_DURATION_S=7
+ROLLOUT_LOOP=true
+ROLLOUT_RETURN_ON_RESET=true
+```
+
+### Запуск
+
+Перед запуском проверь, что камеры видны:
+
+```bash
+lerobot-find-cameras realsense
+```
+
+Запуск policy:
+
+```bash
+./scripts/04_rollout_policy.sh
+```
+
+Длительность обычного rollout задается:
 
 ```bash
 ROLLOUT_DURATION_S=60
 ```
 
-Это один непрерывный live rollout на 60 секунд, не N отдельных эпизодов.
+Если `ROLLOUT_LOOP=false`, это один непрерывный live rollout на заданное число секунд.
 
 ## 10. Частые Проблемы
 

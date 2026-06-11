@@ -57,6 +57,15 @@ $EDITOR config.env
 
 По умолчанию запись сохраняется локально в `cache/datasets/so101_cube_pick`, поэтому replay можно запускать без выгрузки на Hugging Face Hub.
 
+Для запуска конкретного checkpoint укажи папку `pretrained_model`:
+
+```bash
+POLICY_PATH=remote_checkpoints/so101_cube_act_009250/pretrained_model
+./scripts/04_rollout_policy.sh
+```
+
+Параметры rollout, temporal ensembling и loop-режима описаны в [GUIDE.md](GUIDE.md).
+
 Полная инструкция по установке, настройке и запуску находится в [GUIDE.md](GUIDE.md).
 
 ## Ссылки
